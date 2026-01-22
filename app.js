@@ -6,7 +6,11 @@ const cors = require('cors');
  app.use(cors());
 
   app.use('/', (req,res) =>{
-       res.send('Working')
+            try {
+                    res.send('Working')
+            } catch (error) {
+                    res.status('404')
+            }
   })
 //  Routing Start
 
@@ -15,4 +19,5 @@ const cors = require('cors');
 
 
 
- 
+//  https://localhost:5173
+// http://localhost:8585

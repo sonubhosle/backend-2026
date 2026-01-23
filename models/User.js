@@ -27,6 +27,13 @@ const userSchema = new mongoose.Schema({
         type:String,
         enum:['CUSTOMER','ADMIN'],
         default:"CUSTOMER"
+    },
+    photo:{
+        type:String,
+    },
+    createdAt:{
+        type:Date,
+        default:Date.now()
     }
 })
 

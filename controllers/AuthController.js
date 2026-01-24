@@ -1,35 +1,47 @@
 
 const UserService = require('../services/UserService');
-const JWT_PROVIDER = require('../config/JWT')
+const JWT_PROVIDER = require('../config/JWT');
+
 const register = async (req, res) => {
   try {
-   
-    const body = Object.assign({}, req.body);
-    const { name, surname, mobile, email, password, photo } = body;
+    const { name, surname, mobile, email, password, photo } = req.body;
 
-    // Check required fields
-    if (!name || !surname || !mobile || !email || !password ) {
-      return res.status(400).send({ message: "All fields are required" });
+    // Validate required fields
+    if (!name || !surname || !mobile || !email || !password) {
+      return res.status(400).json({
+        message: "All fields are required"
+      });
     }
 
-    // Prepare user data
-    const userData = { name, surname, mobile, email, password, photo };
+    const userData = {
+      name,
+      surname,
+      mobile,
+      email: email.toLowerCase(),
+      password,
+      photo
+    };
 
-    // Create user in DB
+    // Create user
     const user = await UserService.createUser(userData);
 
-    // Generate JWT
+    // Generate token
     const jwt = JWT_PROVIDER.generateToken(user._id);
 
+    // Remove sensitive data
+    user.password = undefined;
 
-
-    return res.status(200).send({
+    return res.status(201).json({
+      message: "User registered successfully",
       jwt,
-      message: "User Registered Successfully",
-      user,
+      user
     });
 
   } catch (error) {
-    return res.status(500).send({ error: error.message });
+    return res.status(500).json({
+      message: error.message
+    });
   }
 };
+
+module.exports = { register };

@@ -5,27 +5,37 @@ const createUser = async (userData) => {
     try {
         let { name, surname, email, password, photo, mobile, role } = userData;
 
-
+        // Validate role
         if (role && !['CUSTOMER', 'ADMIN'].includes(role)) {
-            throw new Error['Invalid role']
+            throw new Error('Invalid role');
         }
-        role = role || 'CUSTOMER'
 
+        role = role || 'CUSTOMER';
+
+        // Check if email exists
         const isExists = await User.findOne({ email });
-
         if (isExists) {
-            throw new Error['Email Already Exist']
+            throw new Error('Email already exists');
         }
 
-        // hash
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-        password = await bcrypt.hash(password, 10);
-        const user = await User.create({ name, surname, email, password, photo, mobile, role });
+        const user = await User.create({
+            name,
+            surname,
+            email,
+            password: hashedPassword,
+            photo,
+            mobile,
+            role
+        });
+
         return user;
 
     } catch (error) {
-        throw new Error(error.message)
+        throw error;
     }
-}
+};
 
-module.exports = {createUser}
+module.exports = { createUser };

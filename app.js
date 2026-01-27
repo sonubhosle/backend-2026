@@ -5,19 +5,12 @@ const cors = require('cors');
  app.use(express.json());
  app.use(cors());
 
-  app.use('/', (req,res) =>{
-            try {
-                    res.send('Working')
-            } catch (error) {
-                    res.status('404')
-            }
-  })
-//  Routing Start
+const Auth_Route = require('./routes/AuthRoutes')
+app.use('/api/auth', Auth_Route);
 
+const User_Route = require('./routes/UserRoutes')
+app.use('/api/user', User_Route);
 
  module.exports = app;
 
 
-
-//  https://localhost:5173
-// http://localhost:8585

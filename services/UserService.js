@@ -14,6 +14,7 @@ const createUser = async (userData) => {
 
         // Check if email exists
         const isExists = await User.findOne({ email });
+        
         if (isExists) {
             throw new Error('Email already exists');
         }
@@ -38,4 +39,14 @@ const createUser = async (userData) => {
     }
 };
 
-module.exports = { createUser };
+const getAllUsers = async () => {
+    try {
+
+        const users = await User.find();
+        return users
+
+    } catch (error) {
+        throw new Error(error.message)
+    }
+}
+module.exports = { createUser,getAllUsers };

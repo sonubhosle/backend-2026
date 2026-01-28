@@ -39,6 +39,17 @@ const createUser = async (userData) => {
     }
 };
 
+const findUserByEmail = async (email) => {
+    try {
+        const user = await User.findOne({ email });
+        return user || null;
+    } catch (error) {
+        console.error('Error finding user by email:', error.message);
+        throw new Error(error.message);
+    }
+};
+
+
 const getAllUsers = async () => {
     try {
 
@@ -49,4 +60,5 @@ const getAllUsers = async () => {
         throw new Error(error.message)
     }
 }
-module.exports = { createUser,getAllUsers };
+
+module.exports = { createUser,getAllUsers,findUserByEmail };

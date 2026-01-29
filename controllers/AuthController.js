@@ -2,7 +2,7 @@
 const UserService = require('../services/UserService');
 const JWT_PROVIDER = require('../config/JWT');
 const bcrypt = require('bcrypt');
-const {sendEmail}  = require('../config/email');
+const { sendEmail } = require('../config/email');
 
 const register = async (req, res) => {
   try {

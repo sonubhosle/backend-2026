@@ -126,7 +126,6 @@ const logoutUser = async () => {
 };
 
 
-
 const generateResetToken = () => crypto.randomBytes(20).toString('hex');
 
 const setResetPasswordToken = async (email) => {

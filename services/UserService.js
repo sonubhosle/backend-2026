@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const JWT_PROVIDER = require('../config/JWT');
+const crypto = require('crypto');
 
 const createUser = async (userData) => {
     try {
@@ -117,12 +118,52 @@ const updateUserProfile = async (userId, updateData) => {
 };
 
 const logoutUser = async () => {
-  try {
-    return { message: 'Logout successful' };
-  } catch (error) {
-    throw new Error(error.message);
-  }
+    try {
+        return { message: 'Logout successful' };
+    } catch (error) {
+        throw new Error(error.message);
+    }
 };
 
 
-module.exports = { createUser, getAllUsers, findUserByEmail, findUserById,logoutUser, getUserProfile,updateUserProfile };
+
+const generateResetToken = () => crypto.randomBytes(20).toString('hex');
+
+const setResetPasswordToken = async (email) => {
+    const user = await User.findOne({ email });
+    if (!user) throw new Error("Email not found");
+
+    const resetToken = generateResetToken();
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 3600000;
+    await user.save();
+    return resetToken;
+};
+
+const resetPassword = async (token, newPassword, confirmPassword) => {
+    const user = await User.findOne(
+        {
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() }
+        }
+    );
+    if (!user) throw new Error("Invalid or expired token");
+
+    if (newPassword !== confirmPassword) throw new Error("Passwords do not match");
+
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+    if (!passwordRegex.test(newPassword)) throw new Error("Password must have uppercase, number, and symbol");
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    return user;
+};
+
+
+
+
+
+module.exports = { setResetPasswordToken, resetPassword, createUser, getAllUsers, findUserByEmail, findUserById, logoutUser, getUserProfile, updateUserProfile };

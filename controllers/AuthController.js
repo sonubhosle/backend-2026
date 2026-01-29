@@ -2,6 +2,7 @@
 const UserService = require('../services/UserService');
 const JWT_PROVIDER = require('../config/JWT');
 const bcrypt = require('bcrypt');
+const {sendEmail}  = require('../config/email');
 
 const register = async (req, res) => {
   try {
@@ -76,5 +77,43 @@ const logout = async (req, res) => {
   }
 };
 
+// FORGOT PASSWORD
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
 
-module.exports = { register,login,logout };
+  try {
+    if (!email) return res.status(400).send({ message: "Email is required" });
+
+    const resetToken = await UserService.setResetPasswordToken(email);
+
+    // Send email with reset link
+    const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+    const html = `<p>You requested a password reset.</p>
+                  <p>Click this link to reset your password: <a href="${resetUrl}">${resetUrl}</a></p>`;
+
+    await sendEmail(email, 'Reset Your Password', html);
+
+    return res.status(200).send({ message: "Reset password link sent to email" });
+  } catch (error) {
+    return res.status(500).send({ error: error.message });
+  }
+};
+
+// RESET PASSWORD
+const resetPassword = async (req, res) => {
+  const { token, newPassword, confirmPassword } = req.body;
+
+  try {
+    if (!token || !newPassword || !confirmPassword) {
+      return res.status(400).send({ message: "Token and passwords are required" });
+    }
+
+    const user = await UserService.resetPassword(token, newPassword, confirmPassword);
+
+    return res.status(200).send({ message: "Password reset successfully", user });
+  } catch (error) {
+    return res.status(500).send({ error: error.message });
+  }
+};
+
+module.exports = { register, login, logout, forgotPassword, resetPassword };

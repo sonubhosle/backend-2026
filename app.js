@@ -6,10 +6,10 @@ const cors = require('cors');
  app.use(cors());
 
 const Auth_Route = require('./routes/AuthRoutes')
-app.use('/api/auth', Auth_Route);
+app.use('/api/v1/auth', Auth_Route);
 
 const User_Route = require('./routes/UserRoutes')
-app.use('/api/user', User_Route);
+app.use('/api/v1/user', User_Route);
 
  module.exports = app;
 

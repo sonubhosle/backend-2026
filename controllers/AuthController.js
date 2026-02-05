@@ -3,7 +3,7 @@ const UserService = require('../services/UserService');
 const JWT_PROVIDER = require('../config/JWT');
 const bcrypt = require('bcrypt');
 const { sendEmail } = require('../config/email');
-
+const CartService = require('../services/CartService')
 const register = async (req, res) => {
   try {
     const { name, surname, mobile, email, password, photo } = req.body;
@@ -26,9 +26,10 @@ const register = async (req, res) => {
 
     // Create user
     const user = await UserService.createUser(userData);
-
     // Generate token
     const jwt = JWT_PROVIDER.generateToken(user._id);
+    
+    await CartService.createCart(user);
 
     // Remove sensitive data
     user.password = undefined;

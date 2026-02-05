@@ -93,7 +93,7 @@ const getUserProfile = async (token) => {
 const updateUserProfile = async (userId, updateData) => {
 
     try {
-        const allowedFields = ['name', 'surname', 'mobile', 'photo', 'email'];
+        const allowedFields = ['name', 'surname', 'mobile', 'photo', 'email',"role"];
         const updates = {};
 
         for (const key of allowedFields) {
@@ -102,7 +102,6 @@ const updateUserProfile = async (userId, updateData) => {
             }
         }
 
-        delete updates.role;
         delete updates._id;
 
         const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true });

@@ -4,11 +4,14 @@ const JWT_PROVIDER = require('../config/JWT');
 const bcrypt = require('bcrypt');
 const { sendEmail } = require('../config/email');
 const CartService = require('../services/CartService')
+
 const register = async (req, res) => {
   try {
-    const { name, surname, mobile, email, password, photo } = req.body;
 
-    // Validate required fields
+     const photoUrl = req.file ? req.file.path : '';
+
+    const { name, surname, mobile, email, password } = req.body;
+
     if (!name || !surname || !mobile || !email || !password) {
       return res.status(400).json({
         message: "All fields are required"
@@ -21,7 +24,7 @@ const register = async (req, res) => {
       mobile,
       email: email.toLowerCase(),
       password,
-      photo
+      photo:photoUrl
     };
 
     // Create user

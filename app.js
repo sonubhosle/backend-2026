@@ -11,6 +11,14 @@ app.use('/api/v1/auth', Auth_Route);
 const User_Route = require('./routes/UserRoutes')
 app.use('/api/v1/user', User_Route);
 
+
+const Product_Route = require('./routes/ProductRoutes')
+app.use('/api/v1/product', Product_Route);
+
+const Cart_Route = require('./routes/CartRoutes')
+app.use('/api/v1/cart', Cart_Route);
+
+
  module.exports = app;
 
 

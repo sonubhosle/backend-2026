@@ -11,9 +11,13 @@ Follow the steps below to set up and run the backend locally.
 
 ---
 
-## 🔹 1. Clone the Repository
+
+
 
 ```bash
+
+## 🔹 1. Clone the Repository
+
 git clone https://github.com/sonubhosle/backend-2026.git
 
 ## 🔹 2. Navigate to Project Directory

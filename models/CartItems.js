@@ -20,15 +20,7 @@ const cartItemSchema = new mongoose.Schema(
       required: true,
     },
 
-    skuCode: {
-      type: String,
-      required: true,
-    },
-
-    weight: {
-      type: String,
-      required: true,
-    },
+    
 
     quantity: {
       type: Number,

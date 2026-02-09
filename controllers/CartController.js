@@ -1,6 +1,6 @@
-const CartService = require("../services/CartService.js");
+const CartService = require("../services/CartService");
 
-// Get Carts
+/* GET USER CART */
 const getUserCart = async (req, res) => {
   try {
     const data = await CartService.findUserCart(req.user._id);
@@ -10,7 +10,7 @@ const getUserCart = async (req, res) => {
   }
 };
 
-// Add Item 
+/* ADD ITEM */
 const addItemToCart = async (req, res) => {
   try {
     const { productId } = req.body;
@@ -19,24 +19,22 @@ const addItemToCart = async (req, res) => {
       return res.status(400).json({ error: "productId required" });
     }
 
-    const data = await CartService.addCartItem(
-      req.user._id,
-      productId
-    );
-
+    const data = await CartService.addCartItem(req.user._id, productId);
     res.status(200).json({ success: true, data });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
 };
 
-// Update Quantity
+/* UPDATE QUANTITY */
 const updateCartItem = async (req, res) => {
   try {
+    const { quantity } = req.body;
+
     const item = await CartService.updateCartItemQuantity(
       req.user._id,
       req.params.id,
-      req.body.quantity
+      quantity
     );
 
     res.status(200).json({ success: true, data: item });
@@ -45,7 +43,7 @@ const updateCartItem = async (req, res) => {
   }
 };
 
-// Remove Item
+/* REMOVE ITEM */
 const removeCartItem = async (req, res) => {
   try {
     const result = await CartService.removeCartItem(

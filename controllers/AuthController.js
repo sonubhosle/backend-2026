@@ -1,123 +1,191 @@
-
 const UserService = require('../services/UserService');
 const JWT_PROVIDER = require('../config/JWT');
 const bcrypt = require('bcrypt');
 const { sendEmail } = require('../config/email');
-const CartService = require('../services/CartService')
+const CartService = require('../services/CartService');
 
+
+
+// REGISTER
 const register = async (req, res) => {
   try {
-
-     const photoUrl = req.file ? req.file.path : '';
+    const photoUrl = req.file ? req.file.path : '';
 
     const { name, surname, mobile, email, password } = req.body;
 
     if (!name || !surname || !mobile || !email || !password) {
-      return res.status(400).json({
-        message: "All fields are required"
-      });
+      return res.status(400).json({ message: 'All fields are required' });
     }
 
-    const userData = {
+    const user = await UserService.createUser({
       name,
       surname,
       mobile,
       email: email.toLowerCase(),
       password,
-      photo:photoUrl
-    };
+      photo: photoUrl
+    });
 
-    // Create user
-    const user = await UserService.createUser(userData);
-    // Generate token
     const jwt = JWT_PROVIDER.generateToken(user._id);
-    
+
     await CartService.createCart(user);
 
-    // Remove sensitive data
     user.password = undefined;
 
     return res.status(201).json({
-      message: "User registered successfully",
+      message: 'User registered successfully',
       jwt,
       user
     });
 
   } catch (error) {
-    return res.status(500).json({
-      message: error.message
-    });
-  }
-};
-
-const login = async (req, res) => {
-  const { password, email } = req.body;
-
-  try {
-    let user;
-    if (email) user = await UserService.findUserByEmail(email);
-    if (!user) return res.status(404).send({ message: 'User not found.' });
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) return res.status(401).send({ message: 'Invalid Password' });
-
-    const jwt = JWT_PROVIDER.generateToken(user._id);
-
-    return res.status(200).send({
-      jwt,
-      message: 'Login Success',
-    });
-  } catch (error) {
-    return res.status(500).send({ error: error.message });
-  }
-};
-
-const logout = async (req, res) => {
-  try {
-    const result = await UserService.logoutUser();
-    return res.status(200).json(result);
-  } catch (error) {
     return res.status(500).json({ message: error.message });
   }
 };
 
+// LOGIN
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await UserService.findUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Invalid password' });
+    }
+
+    const jwt = JWT_PROVIDER.generateToken(user._id);
+
+    return res.status(200).json({
+      message: 'Login successful',
+      jwt
+    });
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+
 // FORGOT PASSWORD
 const forgotPassword = async (req, res) => {
-  const { email } = req.body;
-
   try {
-    if (!email) return res.status(400).send({ message: "Email is required" });
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
 
     const resetToken = await UserService.setResetPasswordToken(email);
 
-    // Send email with reset link
     const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
-    const html = `<p>You requested a password reset.</p>
-                  <p>Click this link to reset your password: <a href="${resetUrl}">${resetUrl}</a></p>`;
+
+    const html = `
+      <p>You requested a password reset.</p>
+      <p>Click the link below:</p>
+      <a href="${resetUrl}">${resetUrl}</a>
+    `;
 
     await sendEmail(email, 'Reset Your Password', html);
 
-    return res.status(200).send({ message: "Reset password link sent to email" });
+    return res.status(200).json({
+      message: 'Reset password link sent to email'
+    });
+
   } catch (error) {
-    return res.status(500).send({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
 // RESET PASSWORD
 const resetPassword = async (req, res) => {
-  const { token, newPassword, confirmPassword } = req.body;
-
   try {
+    const { token, newPassword, confirmPassword } = req.body;
+
     if (!token || !newPassword || !confirmPassword) {
-      return res.status(400).send({ message: "Token and passwords are required" });
+      return res.status(400).json({
+        message: 'Token and passwords are required'
+      });
     }
 
-    const user = await UserService.resetPassword(token, newPassword, confirmPassword);
+    await UserService.resetPassword(token, newPassword, confirmPassword);
 
-    return res.status(200).send({ message: "Password reset successfully", user });
+    return res.status(200).json({
+      message: 'Password reset successful'
+    });
+
   } catch (error) {
-    return res.status(500).send({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
-module.exports = { register, login, logout, forgotPassword, resetPassword };
+
+
+// GET ALL USERS (ADMIN)
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await UserService.getAllUsers();
+    return res.status(200).json(users);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// GET LOGGED-IN USER PROFILE
+const getUserProfile = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ message: 'Token not found' });
+    }
+
+    const user = await UserService.getUserProfile(token);
+    return res.status(200).json(user);
+
+  } catch (error) {
+    return res.status(401).json({ error: error.message });
+  }
+};
+
+// UPDATE PROFILE
+const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const updateData = { ...req.body };
+
+    if (req.file) {
+      updateData.photo = req.file.path;
+    }
+
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === '') delete updateData[key];
+    });
+
+    const updatedUser = await UserService.updateUserProfile(userId, updateData);
+
+    return res.status(200).json({
+      message: 'Profile updated successfully',
+      user: updatedUser
+    });
+
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+
+
+
+module.exports = {
+
+  register,
+  login,
+  forgotPassword,
+  resetPassword,
+  getAllUsers,
+  getUserProfile,
+  updateProfile
+};

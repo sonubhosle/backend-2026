@@ -1,57 +1,66 @@
 const Cart = require("../models/Cart");
-const Product = require ('../models/Product')
-const CartItem = require('../models/CartItems')
+const Product = require("../models/Product");
+const CartItem = require("../models/CartItems");
 
-
+/* CREATE OR GET USER CART */
 const createCart = async (userId) => {
-
-    let cart = await Cart.findOne({ user: userId });
-    if (!cart) {
-        cart = await Cart.create({ user: userId });
-    }
-    return cart;
+  let cart = await Cart.findOne({ user: userId });
+  if (!cart) {
+    cart = await Cart.create({
+      user: userId,
+      totalPrice: 0,
+      totalPayable: 0,
+      totalItem: 0,
+      discount: 0,
+    });
+  }
+  return cart;
 };
 
-
-
+/* UPDATE CART TOTALS */
 const updateCartTotals = async (cartId) => {
-    const items = await CartItem.find({ cart: cartId });
-    let totalPrice = 0;
-    let totalPayable = 0;
-    let totalItem = 0;
+  const items = await CartItem.find({ cart: cartId });
 
-    items.forEach((item) => {
-        totalPrice += item.price;
-        totalPayable += item.discountedPrice;
-        totalItem += item.quantity;
-    });
+  let totalPrice = 0;
+  let totalPayable = 0;
+  let totalItem = 0;
+  let discount = 0;
 
-    await Cart.findByIdAndUpdate(cartId, {
-        totalPrice,
-        totalPayable,
-        totalItem,
-        discount: totalPrice - totalPayable,
-    });
+  items.forEach((item) => {
+    totalPrice += item.price;
+    totalPayable += item.discountedPrice;
+    totalItem += item.quantity;
+    discount += item.discount;
+  });
+
+  await Cart.findByIdAndUpdate(cartId, {
+    totalPrice,
+    totalPayable,
+    totalItem,
+    discount,
+  });
 };
 
-
-
-// Get User Cart
+/* FIND USER CART */
 const findUserCart = async (userId) => {
-    const cart = await createCart(userId);
-    const items = await CartItem.find({ cart: cart._id })
-        .populate("product", "title brand image");
-    return { cart, items };
+  const cart = await createCart(userId);
+
+  const items = await CartItem.find({ cart: cart._id })
+    .populate(
+      "product",
+      "title brand image price discountedPrice productSku"
+    );
+
+  return { cart, items };
 };
 
-// Add Item to Cart 
+/* ADD ITEM TO CART */
 const addCartItem = async (userId, productId) => {
   const cart = await createCart(userId);
 
   const product = await Product.findById(productId);
   if (!product) throw new Error("Product not found");
 
-  //  Find existing cart item (no SKU variants)
   const existingItem = await CartItem.findOne({
     cart: cart._id,
     product: product._id,
@@ -62,6 +71,8 @@ const addCartItem = async (userId, productId) => {
     existingItem.price = product.price * existingItem.quantity;
     existingItem.discountedPrice =
       product.discountedPrice * existingItem.quantity;
+    existingItem.discount =
+      (product.price - product.discountedPrice) * existingItem.quantity;
 
     await existingItem.save();
   } else {
@@ -73,7 +84,7 @@ const addCartItem = async (userId, productId) => {
       quantity: 1,
       price: product.price,
       discountedPrice: product.discountedPrice,
-      discount: product.discount,
+      discount: product.price - product.discountedPrice,
       image: product.image,
     });
   }
@@ -82,8 +93,14 @@ const addCartItem = async (userId, productId) => {
   return await findUserCart(userId);
 };
 
-//  Update Quantity
+/* UPDATE CART ITEM QUANTITY */
 const updateCartItemQuantity = async (userId, cartItemId, quantity) => {
+  quantity = Number(quantity); // 🔥 FIX HERE
+
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    throw new Error("Quantity must be at least 1");
+  }
+
   const item = await CartItem.findById(cartItemId);
   if (!item) throw new Error("Cart item not found");
 
@@ -94,13 +111,11 @@ const updateCartItemQuantity = async (userId, cartItemId, quantity) => {
   const product = await Product.findById(item.product);
   if (!product) throw new Error("Product not found");
 
-  // 🔹 Optional: prevent zero or negative quantity
-  if (quantity < 1) throw new Error("Quantity must be at least 1");
-
   item.quantity = quantity;
   item.price = product.price * quantity;
-  item.discountedPrice =
-    product.discountedPrice * quantity;
+  item.discountedPrice = product.discountedPrice * quantity;
+  item.discount =
+    (product.price - product.discountedPrice) * quantity;
 
   await item.save();
   await updateCartTotals(item.cart);
@@ -109,24 +124,25 @@ const updateCartItemQuantity = async (userId, cartItemId, quantity) => {
 };
 
 
-//  Remove Item
+/* REMOVE CART ITEM */
 const removeCartItem = async (userId, cartItemId) => {
-    const item = await CartItem.findById(cartItemId);
-    if (!item) throw new Error("Cart item not found");
-    if (item.user.toString() !== userId.toString())
-        throw new Error("Unauthorized");
+  const item = await CartItem.findById(cartItemId);
+  if (!item) throw new Error("Cart item not found");
 
-    await CartItem.findByIdAndDelete(cartItemId);
-    await updateCartTotals(item.cart);
+  if (item.user.toString() !== userId.toString()) {
+    throw new Error("Unauthorized");
+  }
 
-    return { message: "Item removed from cart" };
+  await CartItem.findByIdAndDelete(cartItemId);
+  await updateCartTotals(item.cart);
+
+  return { message: "Item removed from cart" };
 };
 
-
 module.exports = {
-    createCart, updateCartTotals,
-    removeCartItem,
-    updateCartItemQuantity,
-    addCartItem,
-    findUserCart,
-}
+  createCart,
+  findUserCart,
+  addCartItem,
+  updateCartItemQuantity,
+  removeCartItem,
+};

@@ -1,18 +1,17 @@
-const Product = require ("../models/Product.js");
-const { generateProductSku, generateSkuCode } = require ("../utils/generateSku.js");
+const Product = require("../models/Product");
+const { generateProductSku, generateSkuCode } = require("../utils/generateSku");
 
-/* ---------- CREATE PRODUCT ---------- */
+// CREATE PRODUCT
 const createProduct = async (reqData, files) => {
   const file = files?.[0];
   if (!file?.path) throw new Error("Product image required");
 
-  // Auto generate SKU ONLY for main product
   const productSku = generateProductSku(reqData.title, reqData.brand);
 
-  // Price & discount calculation
   const price = Number(reqData.price);
-  const discountedPrice =
-    Number(reqData.discountedPrice) ?? price;
+  const discountedPrice = reqData.discountedPrice
+    ? Number(reqData.discountedPrice)
+    : price;
 
   const discount =
     reqData.discount ??
@@ -35,22 +34,31 @@ const createProduct = async (reqData, files) => {
   return await product.save();
 };
 
-
-
-/* ---------- GET ALL PRODUCTS ---------- */
+// GET ALL PRODUCTS
 const getAllProducts = async () => {
-  return await Product.find().populate("ratings").populate("reviews");
+  return await Product.find()
+    .populate("ratings")
+    .populate("reviews");
 };
 
-/* ---------- FIND PRODUCT BY ID ---------- */
+// GET BY CATEGORY ✅
+const getProductsByCategory = async (category) => {
+  return await Product.find({ category })
+    .populate("ratings")
+    .populate("reviews");
+};
+
+// FIND BY ID
 const findProductById = async (id) => {
-  const product = await Product.findById(id).populate("ratings").populate("reviews");
+  const product = await Product.findById(id)
+    .populate("ratings")
+    .populate("reviews");
 
   if (!product) throw new Error("Product not found");
   return product;
 };
 
-/* ---------- DELETE PRODUCT ---------- */
+// DELETE
 const deleteProduct = async (id) => {
   const product = await Product.findById(id);
   if (!product) throw new Error("Product not found");
@@ -59,7 +67,7 @@ const deleteProduct = async (id) => {
   return { message: "Product deleted successfully" };
 };
 
-/* ---------- RELATED PRODUCTS ---------- */
+// RELATED PRODUCTS
 const getRelatedProducts = async (id) => {
   const product = await Product.findById(id);
   if (!product) throw new Error("Product not found");
@@ -71,37 +79,31 @@ const getRelatedProducts = async (id) => {
   }).limit(8);
 };
 
-
+// UPDATE PRODUCT
 const updateProduct = async (productId, reqData, files) => {
   const product = await Product.findById(productId);
   if (!product) throw new Error("Product not found");
 
-  // If a new image is uploaded, update it
   if (files?.[0]?.path) {
     product.image = files[0].path;
   }
 
-  // Update basic fields if provided
   product.title = reqData.title ?? product.title;
   product.brand = reqData.brand ?? product.brand;
-   product.tag = reqData.tag ?? product.tag;
+  product.tag = reqData.tag ?? product.tag;
   product.category = reqData.category ?? product.category;
   product.description = reqData.description ?? product.description;
-
-  // Update top-level prices if provided
   product.price = reqData.price ?? product.price;
   product.discountedPrice = reqData.discountedPrice ?? product.discountedPrice;
   product.discount = reqData.discount ?? product.discount;
 
-  // Update offers
   if (reqData.offers) {
     product.offers = JSON.parse(reqData.offers);
   }
 
-  // Update SKUs if provided
   if (reqData.skus) {
     const skus = JSON.parse(reqData.skus);
-    const updatedSkus = skus.map((s) => {
+    product.skus = skus.map((s) => {
       const discountedPrice = s.discountedPrice ?? s.price;
       const discount =
         s.discount ??
@@ -114,28 +116,26 @@ const updateProduct = async (productId, reqData, files) => {
         discount,
       };
     });
-    product.skus = updatedSkus;
   }
 
   return await product.save();
 };
+
+// HOT DEALS
 const getHotDeals = async (limit = 10) => {
-  return await Product.find({
-    discount: { $gt: 0 } // only discounted products
-  })
-    .sort({ discount: -1 }) // highest discount first
+  return await Product.find({ discount: { $gt: 0 } })
+    .sort({ discount: -1 })
     .limit(Number(limit))
-    .select(
-      "title brand category image price discountedPrice discount skus"
-    );
+    .select("title brand category image price discountedPrice discount skus");
 };
 
 module.exports = {
   createProduct,
   updateProduct,
   getAllProducts,
+  getProductsByCategory,
   findProductById,
   deleteProduct,
   getRelatedProducts,
-  getHotDeals
+  getHotDeals,
 };

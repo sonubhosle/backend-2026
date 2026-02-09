@@ -3,165 +3,159 @@ const bcrypt = require('bcrypt');
 const JWT_PROVIDER = require('../config/JWT');
 const crypto = require('crypto');
 
+/* -------------------- HELPERS -------------------- */
+
+const PASSWORD_REGEX =
+    /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+
+const generateResetToken = () =>crypto.randomBytes(20).toString('hex');
+
+/* -------------------- CREATE USER -------------------- */
+
 const createUser = async (userData) => {
-    try {
-        let { name, surname, email, password, photo, mobile, role } = userData;
+    const { name, surname, email, password, photo, mobile } = userData;
 
-        // Validate role
-        if (role && !['CUSTOMER', 'ADMIN'].includes(role)) {
-            throw new Error('Invalid role');
-        }
-
-        role = role || 'CUSTOMER';
-
-        // Check if email exists
-        const isExists = await User.findOne({ email });
-
-        if (isExists) {
-            throw new Error('Email already exists');
-        }
-
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const user = await User.create({
-            name,
-            surname,
-            email,
-            password: hashedPassword,
-            photo,
-            mobile,
-            role
-        });
-
-        return user;
-
-    } catch (error) {
-        throw error;
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+        throw new Error('Email already exists');
     }
-};
 
-const findUserByEmail = async (email) => {
-    try {
-        const user = await User.findOne({ email });
-        return user || null;
-    } catch (error) {
-        console.error('Error finding user by email:', error.message);
-        throw new Error(error.message);
+    if (!PASSWORD_REGEX.test(password)) {
+        throw new Error(
+            'Password must have at least 8 chars, one uppercase, one number, and one symbol'
+        );
     }
-};
 
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-const getAllUsers = async () => {
-    try {
+    // 🔐 BOOTSTRAP ADMIN LOGIC
+    const role =
+        email === process.env.SUPER_ADMIN_EMAIL
+            ? 'ADMIN'
+            : 'CUSTOMER';
 
-        const users = await User.find();
-        return users
-
-    } catch (error) {
-        throw new Error(error.message)
-    }
-}
-
-const findUserById = async (userId) => {
-    try {
-        const user = await User.findById(userId);
-        return user;
-
-    } catch (error) {
-
-        throw new Error(error.message);
-    }
-};
-
-const getUserProfile = async (token) => {
-    try {
-        const userId = JWT_PROVIDER.getUserIdFromToken(token);
-        const user = await findUserById(userId);
-
-        if (!user) {
-            throw new Error('Account Not Found');
-        }
-
-        return user;
-
-    } catch (error) {
-        throw new Error('Invalid Token or User Not Found');
-    }
-};
-
-const updateUserProfile = async (userId, updateData) => {
-
-    try {
-        const allowedFields = ['name', 'surname', 'mobile', 'photo', 'email',"role"];
-        const updates = {};
-
-        for (const key of allowedFields) {
-            if (key in updateData) {
-                updates[key] = updateData[key];
-            }
-        }
-
-        delete updates._id;
-
-        const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true });
-
-        if (!updatedUser) {
-            throw new Error('User not found');
-        }
-
-        return updatedUser;
-    } catch (error) {
-        throw new Error(error.message);
-    }
-};
-
-const logoutUser = async () => {
-    try {
-        return { message: 'Logout successful' };
-    } catch (error) {
-        throw new Error(error.message);
-    }
-};
-
-
-const generateResetToken = () => crypto.randomBytes(20).toString('hex');
-
-const setResetPasswordToken = async (email) => {
-    const user = await User.findOne({ email });
-    if (!user) throw new Error("Email not found");
-
-    const resetToken = generateResetToken();
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = Date.now() + 3600000;
-    await user.save();
-    return resetToken;
-};
-
-const resetPassword = async (token, newPassword, confirmPassword) => {
-    const user = await User.findOne(
-        {
-            resetPasswordToken: token,
-            resetPasswordExpires: { $gt: Date.now() }
-        }
-    );
-    if (!user) throw new Error("Invalid or expired token");
-
-    if (newPassword !== confirmPassword) throw new Error("Passwords do not match");
-
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
-    if (!passwordRegex.test(newPassword)) throw new Error("Password must have uppercase, number, and symbol");
-
-    user.password = await bcrypt.hash(newPassword, 10);
-    user.resetPasswordToken = null;
-    user.resetPasswordExpires = null;
-    await user.save();
+    const user = await User.create({
+        name,
+        surname,
+        email,
+        password: hashedPassword,
+        photo,
+        mobile,
+        role
+    });
 
     return user;
 };
 
+/* -------------------- FIND USER -------------------- */
+
+const findUserByEmail = async (email) => {
+    return await User.findOne({ email });
+};
+
+const findUserById = async (userId) => {
+    return await User.findById(userId).select('-password -resetPasswordToken -resetPasswordExpires');
+};
+
+/* -------------------- GET ALL USERS (ADMIN) -------------------- */
+
+const getAllUsers = async () => {
+    return await User.find().select('-password -resetPasswordToken -resetPasswordExpires');
+};
+
+/* -------------------- USER PROFILE -------------------- */
+
+const getUserProfile = async (token) => {
+    const userId = JWT_PROVIDER.getUserIdFromToken(token);
+    const user = await findUserById(userId);
+
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    return user;
+};
+
+/* -------------------- UPDATE PROFILE -------------------- */
+
+const updateUserProfile = async (userId, updateData) => {
+
+    const allowedFields = ['name', 'surname', 'mobile', 'photo', 'email'];
+    const updates = {};
+
+    allowedFields.forEach((field) => {
+        if (updateData[field]) {
+            updates[field] = updateData[field];
+        }
+    });
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true }).select('-password');
+
+    if (!updatedUser) {
+        throw new Error('User not found');
+    }
+
+    return updatedUser;
+};
+
+/* -------------------- FORGOT PASSWORD -------------------- */
+
+const setResetPasswordToken = async (email) => {
+    const user = await User.findOne({ email });
+    if (!user) throw new Error('Email not found');
+
+    const resetToken = generateResetToken();
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; 
+    await user.save();
+
+    return resetToken;
+};
+
+/* -------------------- RESET PASSWORD -------------------- */
+
+const resetPassword = async (token, newPassword, confirmPassword) => {
+
+    const user = await User.findOne({
+        resetPasswordToken: token,
+        resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+        throw new Error('Invalid or expired token');
+    }
+
+    if (newPassword !== confirmPassword) {
+        throw new Error('Passwords do not match');
+    }
+
+    if (!PASSWORD_REGEX.test(newPassword)) {
+        throw new Error(
+            'Password must have at least 8 chars, one uppercase, one number, and one symbol'
+        );
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+    return true;
+};
 
 
 
+/* -------------------- EXPORTS -------------------- */
 
-module.exports = { setResetPasswordToken, resetPassword, createUser, getAllUsers, findUserByEmail, findUserById, logoutUser, getUserProfile, updateUserProfile };
+module.exports = {
+    
+    createUser,
+    findUserByEmail,
+    findUserById,
+    getAllUsers,
+    getUserProfile,
+    updateUserProfile,
+    setResetPasswordToken,
+    resetPassword
+};

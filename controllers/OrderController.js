@@ -113,6 +113,7 @@ const deleteOrder = async (req, res) => {
   }
 };
 
+// Order History
 const getOrderItemHistory = async (req, res) => {
   try {
     const history = await OrderService.getHistory(req.user);
@@ -127,12 +128,11 @@ const getOrderItemHistory = async (req, res) => {
   }
 };
 
-
 // DELETE ORDER ITEM
 const deleteOrderItem = async (req, res) => {
   try {
     const result = await OrderService.deleteOrderItem(
-      req.params.id,
+      req.params.itemId,
       req.user
     );
 
@@ -141,6 +141,7 @@ const deleteOrderItem = async (req, res) => {
     res.status(403).json({ success: false, error: error.message });
   }
 };
+
 
 
 module.exports = {

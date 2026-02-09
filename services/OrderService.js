@@ -208,7 +208,7 @@ const getAllOrdersAdmin = async () => {
 
 // DELETE ORDER
 const deleteOrderById = async (orderId) => {
-   const order = await Order.findById(orderId);
+  const order = await Order.findById(orderId);
   if (!order) throw new Error("Order not found");
 
   await OrderItem.updateMany(
@@ -223,31 +223,35 @@ const deleteOrderById = async (orderId) => {
 
 
 const getHistory = async (user) => {
-  const filter =
-    user.role === "ADMIN"
-      ? { isDeleted: true }
-      : { userId: user._id, isDeleted: true };
-
-  return await OrderItem.find(filter)
+  return await OrderItem.find({
+    userId: user._id,
+    isDeleted: true
+  })
     .populate("product", "title image price discountedPrice")
     .sort({ createdAt: -1 })
     .lean();
 };
 
-
 const deleteOrderItem = async (orderItemId, user) => {
   const item = await OrderItem.findById(orderItemId);
   if (!item) throw new Error("Order item not found");
 
+  // ✅ Sirf history item hi delete ho
+  if (!item.isDeleted) {
+    throw new Error("Item is not in history");
+  }
+
+  // ✅ Security
   if (user.role !== "ADMIN" && item.userId.toString() !== user._id.toString()) {
     throw new Error("Unauthorized");
   }
 
-  item.isDeleted = true;
-  await item.save();
+  // 🔥 REAL DELETE
+  await OrderItem.findByIdAndDelete(orderItemId);
 
-  return { message: "Order item deleted successfully" };
+  return { message: "Order item permanently deleted from history" };
 };
+
 
 // EXPORT ALL
 module.exports =  {

@@ -43,11 +43,17 @@ const getAllProducts = async () => {
 
 // GET BY CATEGORY ✅
 const getProductsByCategory = async (category) => {
-  return await Product.find({ category })
-    .populate("ratings")
-    .populate("reviews");
-};
+  const normalized = category
+    .trim()
+    .replace(/[_\-\s]+/g, '[-_\\s]*');
 
+  return await Product.find({
+    category: {
+      $regex: `^${normalized}$`,
+      $options: 'i' 
+    }
+  });
+};
 // FIND BY ID
 const findProductById = async (id) => {
   const product = await Product.findById(id)

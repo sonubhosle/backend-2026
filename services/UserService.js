@@ -54,13 +54,14 @@ const findUserByEmail = async (email) => {
 };
 
 const findUserById = async (userId) => {
-    return await User.findById(userId).select('-password -resetPasswordToken -resetPasswordExpires');
+    return await User.findById(userId).select('-password -resetPasswordToken -resetPasswordExpires').populate('ratings').populate('reviews');
 };
 
 /* -------------------- GET ALL USERS (ADMIN) -------------------- */
 
 const getAllUsers = async () => {
-    return await User.find().select('-password -resetPasswordToken -resetPasswordExpires');
+    return await User.find().select('-password -resetPasswordToken -resetPasswordExpires')  
+    .populate('ratings').populate('reviews');
 };
 
 /* -------------------- USER PROFILE -------------------- */

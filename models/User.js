@@ -19,32 +19,59 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, "Enter Your Email"]
     },
-     password: {
+    password: {
         type: String,
         required: [true, "Enter Your Password"]
     },
-    role:{
-        type:String,
-        enum:['CUSTOMER','ADMIN'],
-        default:"CUSTOMER"
+    role: {
+        type: String,
+        enum: ['CUSTOMER', 'ADMIN'],
+        default: "CUSTOMER"
     },
-    photo:{
-        type:String,
+    photo: {
+        type: String,
     },
-       resetPasswordToken: {
-    type: String
-  },
-  resetPasswordExpires: {
-    type: Date
-  },
-  
-    createdAt:{
-        type:Date,
-        default:Date.now()
+    resetPasswordToken: {
+        type: String
     },
-   
-})
+    resetPasswordExpires: {
+        type: Date
+    },
+   wishlist: [
+    {
+      productId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "products", 
+        required: true,
+      },
+      addedAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
+    
+    reviews: [
+        {
+            type: mongoose.Schema.Types.ObjectId,       
+            ref: 'reviews'
+        }
+    ],
+    ratings: [
+        {
+            type: mongoose.Schema.Types.ObjectId,   
+            ref: 'ratings'
+        }
+    ],
 
 
-const User = mongoose.model('users',userSchema);
+    createdAt: {
+        type: Date,
+        default: Date.now()
+    },
+
+}, { timestamps: true })
+
+
+const User = mongoose.model('users', userSchema);
 module.exports = User

@@ -7,7 +7,7 @@ const authenticate = require('../middleware/Authenticate');
 
 /* ADMIN */
 router.post(
-  "/create",
+  "/product/create",
   authenticate,
   admin("ADMIN"),
   uploadProduct,
@@ -15,7 +15,7 @@ router.post(
 );
 
 router.put(
-  "/:id",
+  "/product/update/:id",
   authenticate,
   admin("ADMIN"),
   uploadProduct,
@@ -23,17 +23,17 @@ router.put(
 );
 
 router.delete(
-  "/:id",
+  "/product/delete/:id",
   authenticate,
   admin("ADMIN"),
   Product_Controller.deleteProduct
 );
 
 /* PUBLIC */
-router.get("/hot-deals", Product_Controller.getHotDeals);
-router.get("/category/:category", Product_Controller.getProductsByCategory);
-router.get("/:id/related", Product_Controller.getRelatedProducts);
-router.get("/:id", Product_Controller.findProductById);
-router.get("/", Product_Controller.getAllProducts);
+router.get("/products/hot-deals", Product_Controller.getHotDeals);
+router.get("/products/category/:category", Product_Controller.getProductsByCategory);
+router.get("/products/:id/related", Product_Controller.getRelatedProducts);
+router.get("/product/:id", Product_Controller.findProductById);
+router.get("/products/", Product_Controller.getAllProducts);
 
 module.exports = router;

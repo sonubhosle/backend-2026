@@ -16,12 +16,12 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    // ratings: [{ type: mongoose.Schema.Types.ObjectId, ref: "ratings" }],
-    // reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "reviews" }],
-    // numRatings: { type: Number, default: 0 },
-    // numReviews: { type: Number, default: 0 },
+    ratings: [{ type: mongoose.Schema.Types.ObjectId, ref: "ratings" }],
+    reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "reviews" }],
+    numRatings: { type: Number, default: 0 },
+    numReviews: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now },
-});
+}, { timestamps: true });
 
 
 const Product = mongoose.models.products || mongoose.model("products", productSchema);

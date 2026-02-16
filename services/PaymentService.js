@@ -23,7 +23,7 @@ const createPaymentLink = async (orderId) => {
         },
         notify: { sms: true, email: true },
         reminder_enable: true,
-        callback_url: `http://localhost:8585/api/payment/callback?orderId=${orderId}`,
+        callback_url: `http://localhost:8585/api/v1/callback?orderId=${orderId}`,
         callback_method: "get"
 
     });

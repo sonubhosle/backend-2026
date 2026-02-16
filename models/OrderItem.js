@@ -33,9 +33,9 @@ const orderItemSchema = new mongoose.Schema(
       ref: "users",
       required: true,
     },
-    image: String,
-    title: String,
-     isDeleted: {
+    image: { type: String },
+    title: { type: String },
+    isDeleted: {
       type: Boolean,
       default: false,
     },

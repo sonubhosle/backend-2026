@@ -44,31 +44,41 @@ const register = async (req, res) => {
 };
 
 // LOGIN
+
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await UserService.findUserByEmail(email);
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    const user = await UserService.findUserByEmail(email.toLowerCase());
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Invalid password' });
+      return res.status(401).json({ message: "Invalid password" });
     }
 
     const jwt = JWT_PROVIDER.generateToken(user._id);
 
+    // Remove password before sending response
+    user.password = undefined;
+
     return res.status(200).json({
-      message: 'Login successful',
-      jwt
+      message: "Login successful",
+      jwt,
+      user   // ✅ VERY IMPORTANT
     });
 
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };
+
 
 
 // FORGOT PASSWORD
